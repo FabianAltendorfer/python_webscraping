@@ -1,5 +1,6 @@
 
 import requests
+import pyodbc
 import math
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -155,8 +156,26 @@ def GetDetailsFromItems(itemList):
     return df
 
 
+def save_dataframe_to_mssql(df, table_name, connection_string):
+    cnxn = pyodbc.connect(connection_string)
+    cursor = cnxn.cursor()
+
+    # Insert DataFrame rows into the table
+    for _, row in df.iterrows():
+        columns = ", ".join([f"[{col}]" for col in df.columns])
+        values = ", ".join([f"'{value}'" if isinstance(value, str) else str(value) for value in row])
+        query = f"INSERT INTO {table_name} ({columns}) VALUES ({values});"
+        cursor.execute(query)
+    cnxn.commit()
+
+    # Close the cursor and connection
+    cursor.close()
+    cnxn.close()
+
+
 # In[11]:
 
 
 dframe = GetDetailsFromItems(allItems)
-
+connection_string = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=SQLEXPRESS;DATABASE=fincom_realestate;UID=*;PWD=*"  # * is a placeholder for the actual values
+save_dataframe_to_mssql(dframe, "href_wh_hauskaufen", connection_string)
